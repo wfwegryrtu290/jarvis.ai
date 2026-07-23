@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from computer.search import search
-from computer.history import history
+from context.context import context
 
 
 TEXT_EXTENSIONS = {
@@ -24,11 +24,13 @@ TEXT_EXTENSIONS = {
 
 def read_file(target=None):
 
+    # Ако няма подаден файл, използвай последния избран
     if target is None:
 
-        path = history.last_file
+        path = context.current_file
 
-        if path is None:
+        if not path:
+
             return {
                 "success": False,
                 "error": "Няма избран файл."
@@ -39,6 +41,7 @@ def read_file(target=None):
         result = search(target)
 
         if result is None:
+
             return {
                 "success": False,
                 "error": f"Не намерих '{target}'."
@@ -47,6 +50,7 @@ def read_file(target=None):
         kind, path = result
 
         if kind != "file":
+
             return {
                 "success": False,
                 "error": "Това не е файл."
@@ -54,19 +58,35 @@ def read_file(target=None):
 
     file = Path(path)
 
+    if not file.exists():
+
+        return {
+            "success": False,
+            "error": "Файлът не съществува."
+        }
+
     if file.suffix.lower() not in TEXT_EXTENSIONS:
 
         return {
             "success": False,
-            "error": "Форматът все още не се поддържа."
+            "error": f"Форматът {file.suffix} все още не се поддържа."
         }
 
-    text = file.read_text(
-        encoding="utf-8",
-        errors="ignore"
-    )
+    try:
 
-    history.remember("file", str(file))
+        text = file.read_text(
+            encoding="utf-8",
+            errors="ignore"
+        )
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+    context.current_file = str(file)
 
     return {
 
