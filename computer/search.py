@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from core.logger import logger
 from computer.index import computer
 
 
@@ -7,147 +8,242 @@ HOME = Path.home()
 
 SPECIAL_FOLDERS = {
     "desktop": HOME / "Desktop",
-        "documents": HOME / "Documents",
-            "downloads": HOME / "Downloads",
-                "pictures": HOME / "Pictures",
-                    "videos": HOME / "Videos",
-                        "music": HOME / "Music"
-                        }
+    "documents": HOME / "Documents",
+    "downloads": HOME / "Downloads",
+    "pictures": HOME / "Pictures",
+    "videos": HOME / "Videos",
+    "music": HOME / "Music",
+}
 
 
-                        def score(kind, path):
+def score(kind, path):
 
-                            p = path.lower()
+    p = str(path).lower()
 
-                                score = 0
+    value = 0
 
-                                    # Потребителски папки имат най-висок приоритет
-                                        if str(HOME).lower() in p:
-                                                score += 1000
+    # Потребителските файлове имат най-висок приоритет
+    if str(HOME).lower() in p:
+        value += 1000
 
-                                                    priorities = {
-                                                            "desktop": 900,
-                                                                    "documents": 800,
-                                                                            "downloads": 700,
-                                                                                    "pictures": 600,
-                                                                                            "videos": 500,
-                                                                                                    "music": 400,
-                                                                                                        }
+    priorities = {
+        "desktop": 900,
+        "documents": 800,
+        "downloads": 700,
+        "pictures": 600,
+        "videos": 500,
+        "music": 400,
+    }
 
-                                                                                                            for name, value in priorities.items():
+    for folder, points in priorities.items():
 
-                                                                                                                    if name in p:
-                                                                                                                                score += value
+        if folder in p:
+            value += points
 
-                                                                                                                                    # Истинските приложения имат по-висок приоритет
-                                                                                                                                        if kind == "app":
+    if kind == "app":
 
-                                                                                                                                                if p.endswith(".exe"):
-                                                                                                                                                            score += 5000
+        if p.endswith(".exe"):
+            value += 5000
 
-                                                                                                                                                                    elif p.endswith(".lnk"):
-                                                                                                                                                                                score += 2500
+        elif p.endswith(".lnk"):
+            value += 2500
 
-                                                                                                                                                                                        else:
-                                                                                                                                                                                                    score += 1000
+        else:
+            value += 1000
 
-                                                                                                                                                                                                        # Предпочитай Program Files
-                                                                                                                                                                                                            if "program files" in p:
-                                                                                                                                                                                                                    score += 800
+        if "program files" in p:
+            value += 800
 
-                                                                                                                                                                                                                        return score
+    return value
 
 
-                                                                                                                                                                                                                        def search(target):
+def add_result(results, kind, name, path, target, exact_bonus):
 
-                                                                                                                                                                                                                            target = target.lower().strip()
+    if name == target:
 
-                                                                                                                                                                                                                                # ---------- Специални папки ----------
+        results.append(
+            (
+                kind,
+                path,
+                exact_bonus + score(kind, path),
+            )
+        )
 
-                                                                                                                                                                                                                                    if target in SPECIAL_FOLDERS:
+        return
 
-                                                                                                                                                                                                                                            folder = SPECIAL_FOLDERS[target]
+    if target in name:
 
-                                                                                                                                                                                                                                                    if folder.exists():
+        results.append(
+            (
+                kind,
+                path,
+                score(kind, path),
+            )
+        )
 
-                                                                                                                                                                                                                                                                return (
-                                                                                                                                                                                                                                                                                "folder",
-                                                                                                                                                                                                                                                                                                str(folder)
-                                                                                                                                                                                                                                                                                                            )
 
-                                                                                                                                                                                                                                                                                                                results = []
+def search_apps(target, results):
 
-                                                                                                                                                                                                                                                                                                                    # ---------- Applications ----------
+    for name, path in computer.apps.items():
 
-                                                                                                                                                                                                                                                                                                                        for name, path in computer.apps.items():
+        add_result(
+            results,
+            "app",
+            name,
+            path,
+            target,
+            100000,
+        )
 
-                                                                                                                                                                                                                                                                                                                                if name == target:
 
-                                                                                                                                                                                                                                                                                                                                            results.append((
-                                                                                                                                                                                                                                                                                                                                                            "app",
-                                                                                                                                                                                                                                                                                                                                                                            path,
-                                                                                                                                                                                                                                                                                                                                                                                            100000 + score("app", path)
-                                                                                                                                                                                                                                                                                                                                                                                                        ))
+def search_files(target, results):
 
-                                                                                                                                                                                                                                                                                                                                                                                                                elif target in name:
+    for name, path in computer.files.items():
 
-                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
-                                                                                                                                                                                                                                                                                                                                                                                                                                            "app",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                            50000 + score("app", path)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
+        add_result(
+            results,
+            "file",
+            name,
+            path,
+            target,
+            30000,
+        )
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            # ---------- Files ----------
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                for name, path in computer.files.items():
+def search_folders(target, results):
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if name == target:
+    for name, path in computer.folders.items():
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    results.append((
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "file",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    30000 + score("file", path)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ))
+        add_result(
+            results,
+            "folder",
+            name,
+            path,
+            target,
+            10000,
+        )
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        elif target in name:
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    results.append((
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "file",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    score("file", path)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ))
+def sort_results(results):
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # ---------- Folders ----------
+    results.sort(
+        key=lambda item: item[2],
+        reverse=True,
+    )
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        for name, path in computer.folders.items():
+    return results
+    def search(target):
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if name == target:
+    if not target:
+        return None
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "folder",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            10000 + score("folder", path)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
+    target = target.lower().strip()
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                elif target in name:
+    logger.debug(f"Searching for: {target}")
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "folder",
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            score("folder", path)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
+    # ==========================
+    # Special folders
+    # ==========================
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if not results:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return None
+    if target in SPECIAL_FOLDERS:
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        results.sort(
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                key=lambda item: item[2],
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        reverse=True
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            )
+        folder = SPECIAL_FOLDERS[target]
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                kind, path, _ = results[0]
+        if folder.exists():
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            kind,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        )
+            logger.debug(f"Found special folder: {folder}")
+
+            return (
+                "folder",
+                str(folder)
+            )
+
+    # ==========================
+    # Search
+    # ==========================
+
+    results = []
+
+    search_apps(
+        target,
+        results
+    )
+
+    search_files(
+        target,
+        results
+    )
+
+    search_folders(
+        target,
+        results
+    )
+
+    # ==========================
+    # Nothing found
+    # ==========================
+
+    if not results:
+
+        logger.debug("Nothing found.")
+
+        return None
+
+    # ==========================
+    # Sort
+    # ==========================
+
+    sort_results(results)
+
+    kind, path, score_value = results[0]
+
+    logger.debug(
+        f"Found {kind}: {path} ({score_value})"
+    )
+
+    return (
+        kind,
+        path
+    )
+
+
+def search_all(target):
+
+    """
+    Връща всички резултати,
+    сортирани по приоритет.
+    """
+
+    if not target:
+
+        return []
+
+    target = target.lower().strip()
+
+    results = []
+
+    search_apps(
+        target,
+        results
+    )
+
+    search_files(
+        target,
+        results
+    )
+
+    search_folders(
+        target,
+        results
+    )
+
+    if not results:
+
+        return []
+
+    return sort_results(results)
+
+
+def exists(target):
+
+    return search(target) is not None
