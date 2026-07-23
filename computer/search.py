@@ -132,7 +132,9 @@ def sort_results(results):
     )
 
     return results
-    def search(target):
+
+
+def search(target):
 
     if not target:
         return None
