@@ -8,6 +8,12 @@ class Kernel:
 
     def __init__(self):
 
+        self.task_count = 0
+        self.completed_tasks = 0
+        self.failed_tasks = 0
+        self.current_task = None
+        self.last_results = []
+
         logger.info("Kernel initialized")
 
     def start(self):
@@ -28,13 +34,55 @@ class Kernel:
 
     def add_task(self, task):
 
+        self.task_count += 1
+
         queue.add(task)
 
         bus.emit("task.created", task)
 
     def next_task(self):
 
-        return queue.next()
+        self.current_task = queue.next()
+
+        return self.current_task
+
+    def task_completed(self, result=None):
+
+        self.completed_tasks += 1
+
+        self.last_results.append(result)
+
+        bus.emit("task.completed", result)
+
+    def task_failed(self, error):
+
+        self.failed_tasks += 1
+
+        bus.emit("task.failed", error)
+
+    def clear_results(self):
+
+        self.last_results.clear()
+
+    def stats(self):
+
+        return {
+
+            "running": state.get("running"),
+
+            "task_count": self.task_count,
+
+            "completed_tasks": self.completed_tasks,
+
+            "failed_tasks": self.failed_tasks,
+
+            "queue_size": len(queue),
+
+            "current_task": self.current_task,
+
+            "last_results": len(self.last_results),
+
+        }
 
 
 kernel = Kernel()
