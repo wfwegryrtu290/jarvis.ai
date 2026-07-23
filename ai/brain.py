@@ -1,4 +1,5 @@
 import json
+import time
 
 from core.logger import logger
 from core.kernel import kernel
@@ -11,15 +12,13 @@ from agents.manager import manager
 
 def process(message):
 
-    logger.info(f"📩 {message}")
+    start = time.perf_counter()
 
-    kernel.add_task(message)
+    logger.info(f"📩 {message}")
 
     try:
 
-        # ==========================
-        # Planning
-        # ==========================
+        kernel.add_task(message)
 
         logger.info("📋 Creating plan...")
 
@@ -27,9 +26,9 @@ def process(message):
 
         logger.debug(plan)
 
-        # ==========================
-        # Validate
-        # ==========================
+        if not isinstance(plan, dict):
+
+            return "Planner върна невалиден резултат."
 
         ok, error = validate(plan)
 
@@ -39,23 +38,25 @@ def process(message):
 
             return error
 
-        # ==========================
-        # Execute
-        # ==========================
-
         logger.info("⚙ Executing actions...")
+
+        actions = plan.get("actions", [])
+
+        if not isinstance(actions, list):
+
+            return "Невалиден списък с действия."
 
         results = []
 
-        for action in plan.get("actions", []):
+        for action in actions:
 
             result = manager.execute(action)
 
             results.append(result)
 
-        # ==========================
-        # Check results
-        # ==========================
+        kernel.last_results = results
+
+        messages = []
 
         for result in results:
 
@@ -87,17 +88,24 @@ def process(message):
 
             if "message" in result:
 
-                return str(result["message"])
+                messages.append(str(result["message"]))
 
-        # ==========================
-        # Final Answer
-        # ==========================
+        if messages:
+
+            return "\n".join(messages)
 
         answer = str(plan.get("answer", "")).strip()
 
         if not answer:
 
             answer = "Готово."
+
+        elapsed = round(
+            time.perf_counter() - start,
+            3
+        )
+
+        logger.info(f"✅ Finished in {elapsed}s")
 
         return answer
 
