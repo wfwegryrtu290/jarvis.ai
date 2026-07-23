@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 
+from core.logger import logger
 from computer.index import computer
 
 
 USER = Path.home()
 
 ROOTS = [
-
     USER / "Desktop",
     USER / "Documents",
     USER / "Downloads",
@@ -24,19 +24,16 @@ ROOTS = [
     "Microsoft/Windows/Start Menu/Programs",
 
     Path(os.environ.get("APPDATA", "")) /
-    "Microsoft/Windows/Start Menu/Programs"
-
+    "Microsoft/Windows/Start Menu/Programs",
 ]
 
 
 APP_EXTENSIONS = {
-
     ".exe",
     ".lnk",
     ".bat",
     ".cmd",
-    ".msc"
-
+    ".msc",
 }
 
 
@@ -44,11 +41,6 @@ def add_folder(folder):
 
     computer.add_folder(
         folder.name,
-        str(folder)
-    )
-
-    computer.add_folder(
-        folder.name.lower(),
         str(folder)
     )
 
@@ -65,19 +57,23 @@ def add_app(file):
 
     name = file.stem.lower().strip()
 
-    if name not in computer.apps:
-
-        computer.add_app(
-            name,
-            str(file)
-        )
+    computer.add_app(
+        name,
+        str(file)
+    )
 
 
 def scan():
 
+    logger.info("🔍 Scanning computer...")
+
     computer.clear()
 
     visited = set()
+
+    scanned = 0
+    skipped = 0
+    errors = 0
 
     for root in ROOTS:
 
@@ -87,38 +83,49 @@ def scan():
         try:
             add_folder(root)
         except Exception:
-            pass
+            errors += 1
 
-        for path in root.rglob("*"):
+        try:
 
-            try:
+            for path in root.rglob("*"):
 
-                path = path.resolve()
+                try:
 
-                key = str(path).lower()
+                    path = path.resolve()
 
-                if key in visited:
-                    continue
+                    key = str(path).lower()
 
-                visited.add(key)
+                    if key in visited:
+                        skipped += 1
+                        continue
 
-                if path.is_dir():
+                    visited.add(key)
 
-                    add_folder(path)
+                    scanned += 1
 
-                    continue
+                    if path.is_dir():
 
-                add_file(path)
+                        add_folder(path)
+                        continue
 
-                if path.suffix.lower() in APP_EXTENSIONS:
+                    add_file(path)
 
-                    add_app(path)
+                    if path.suffix.lower() in APP_EXTENSIONS:
+                        add_app(path)
 
-            except Exception:
-                pass
+                except Exception:
+                    errors += 1
 
-    print(f"🟢 Applications : {len(computer.apps)}")
-    print(f"📄 Files        : {len(computer.files)}")
-    print(f"📁 Folders      : {len(computer.folders)}")
+        except Exception:
+            errors += 1
+
+    stats = computer.stats()
+
+    logger.info(f"🟢 Applications : {stats['apps']}")
+    logger.info(f"📄 Files        : {stats['files']}")
+    logger.info(f"📁 Folders      : {stats['folders']}")
+    logger.info(f"🔍 Scanned      : {scanned}")
+    logger.info(f"⏭️ Skipped      : {skipped}")
+    logger.info(f"⚠️ Errors       : {errors}")
 
     return computer
