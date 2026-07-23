@@ -6,148 +6,148 @@ from computer.index import computer
 HOME = Path.home()
 
 SPECIAL_FOLDERS = {
-
     "desktop": HOME / "Desktop",
-
-    "documents": HOME / "Documents",
-
-    "downloads": HOME / "Downloads",
-
-    "pictures": HOME / "Pictures",
-
-    "videos": HOME / "Videos",
-
-    "music": HOME / "Music"
-
-}
+        "documents": HOME / "Documents",
+            "downloads": HOME / "Downloads",
+                "pictures": HOME / "Pictures",
+                    "videos": HOME / "Videos",
+                        "music": HOME / "Music"
+                        }
 
 
-def score(kind, path):
+                        def score(kind, path):
 
-    p = path.lower()
+                            p = path.lower()
 
-    s = 0
+                                score = 0
 
-    if str(HOME).lower() in p:
-        s += 1000
+                                    # Потребителски папки имат най-висок приоритет
+                                        if str(HOME).lower() in p:
+                                                score += 1000
 
-    if "desktop" in p:
-        s += 900
+                                                    priorities = {
+                                                            "desktop": 900,
+                                                                    "documents": 800,
+                                                                            "downloads": 700,
+                                                                                    "pictures": 600,
+                                                                                            "videos": 500,
+                                                                                                    "music": 400,
+                                                                                                        }
 
-    if "documents" in p:
-        s += 800
+                                                                                                            for name, value in priorities.items():
 
-    if "downloads" in p:
-        s += 700
+                                                                                                                    if name in p:
+                                                                                                                                score += value
 
-    if "pictures" in p:
-        s += 600
+                                                                                                                                    # Истинските приложения имат по-висок приоритет
+                                                                                                                                        if kind == "app":
 
-    if "videos" in p:
-        s += 500
+                                                                                                                                                if p.endswith(".exe"):
+                                                                                                                                                            score += 5000
 
-    if "music" in p:
-        s += 400
+                                                                                                                                                                    elif p.endswith(".lnk"):
+                                                                                                                                                                                score += 2500
 
-    if kind == "app":
-        s += 300
+                                                                                                                                                                                        else:
+                                                                                                                                                                                                    score += 1000
 
-    if "program files" in p:
-        s += 200
+                                                                                                                                                                                                        # Предпочитай Program Files
+                                                                                                                                                                                                            if "program files" in p:
+                                                                                                                                                                                                                    score += 800
 
-    return s
+                                                                                                                                                                                                                        return score
 
 
-def search(target):
+                                                                                                                                                                                                                        def search(target):
 
-    target = target.lower().strip()
+                                                                                                                                                                                                                            target = target.lower().strip()
 
-    # ---------- Специални папки ----------
+                                                                                                                                                                                                                                # ---------- Специални папки ----------
 
-    if target in SPECIAL_FOLDERS:
+                                                                                                                                                                                                                                    if target in SPECIAL_FOLDERS:
 
-        path = SPECIAL_FOLDERS[target]
+                                                                                                                                                                                                                                            folder = SPECIAL_FOLDERS[target]
 
-        if path.exists():
+                                                                                                                                                                                                                                                    if folder.exists():
 
-            return (
-                "folder",
-                str(path)
-            )
+                                                                                                                                                                                                                                                                return (
+                                                                                                                                                                                                                                                                                "folder",
+                                                                                                                                                                                                                                                                                                str(folder)
+                                                                                                                                                                                                                                                                                                            )
 
-    results = []
+                                                                                                                                                                                                                                                                                                                results = []
 
-    # ---------- Applications ----------
+                                                                                                                                                                                                                                                                                                                    # ---------- Applications ----------
 
-    for name, path in computer.apps.items():
+                                                                                                                                                                                                                                                                                                                        for name, path in computer.apps.items():
 
-        if name == target:
+                                                                                                                                                                                                                                                                                                                                if name == target:
 
-            results.append((
-                "app",
-                path,
-                10000
-            ))
+                                                                                                                                                                                                                                                                                                                                            results.append((
+                                                                                                                                                                                                                                                                                                                                                            "app",
+                                                                                                                                                                                                                                                                                                                                                                            path,
+                                                                                                                                                                                                                                                                                                                                                                                            100000 + score("app", path)
+                                                                                                                                                                                                                                                                                                                                                                                                        ))
 
-        elif target in name:
+                                                                                                                                                                                                                                                                                                                                                                                                                elif target in name:
 
-            results.append((
-                "app",
-                path,
-                score("app", path)
-            ))
+                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
+                                                                                                                                                                                                                                                                                                                                                                                                                                            "app",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            50000 + score("app", path)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
 
-    # ---------- Folders ----------
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            # ---------- Files ----------
 
-    for name, path in computer.folders.items():
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                for name, path in computer.files.items():
 
-        if name == target:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if name == target:
 
-            results.append((
-                "folder",
-                path,
-                score("folder", path) + 5000
-            ))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    results.append((
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "file",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    30000 + score("file", path)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ))
 
-        elif target in name:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        elif target in name:
 
-            results.append((
-                "folder",
-                path,
-                score("folder", path)
-            ))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    results.append((
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "file",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    score("file", path)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ))
 
-    # ---------- Files ----------
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    # ---------- Folders ----------
 
-    for name, path in computer.files.items():
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        for name, path in computer.folders.items():
 
-        if name == target:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if name == target:
 
-            results.append((
-                "file",
-                path,
-                score("file", path) + 3000
-            ))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "folder",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            10000 + score("folder", path)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
 
-        elif target in name:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                elif target in name:
 
-            results.append((
-                "file",
-                path,
-                score("file", path)
-            ))
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            results.append((
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            "folder",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            path,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            score("folder", path)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ))
 
-    if not results:
-        return None
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if not results:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return None
 
-    results.sort(
-        key=lambda x: x[2],
-        reverse=True
-    )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        results.sort(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                key=lambda item: item[2],
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        reverse=True
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            )
 
-    kind, path, _ = results[0]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                kind, path, _ = results[0]
 
-    return (
-        kind,
-        path
-    )
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    return (
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            kind,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    path
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        )
