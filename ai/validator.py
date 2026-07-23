@@ -1,14 +1,43 @@
 from agents.manager import manager
 from tools.registry import get_tools
 
+MAX_ACTIONS = 50
+
+
+def normalize_action(action):
+
+    agent = str(action.get("agent", "")).lower()
+    tool = str(action.get("tool", "")).lower()
+
+    action["agent"] = agent
+    action["tool"] = tool
+
+    mapping = {
+        "computer.open": "system",
+        "terminal.run": "system",
+        "windows.open": "system",
+        "file.read": "system",
+    }
+
+    if agent in mapping:
+        action["agent"] = mapping[agent]
+
+    if tool == "computer.open":
+
+        args = action.setdefault("arguments", {})
+
+        if "path" in args and "target" not in args:
+            args["target"] = args.pop("path")
+
+        if "name" in args and "target" not in args:
+            args["target"] = args.pop("name")
+
 
 def validate(plan):
 
-    # Планът трябва да е dict
     if not isinstance(plan, dict):
         return False, "Planner не върна валиден JSON."
 
-    # Задължителни полета
     required = [
         "thought",
         "actions",
@@ -20,70 +49,56 @@ def validate(plan):
         if field not in plan:
             return False, f"Липсва поле '{field}'."
 
-    # actions трябва да е list
+    if not isinstance(plan["thought"], str):
+        return False, "'thought' трябва да е string."
+
+    if not isinstance(plan["answer"], str):
+        return False, "'answer' трябва да е string."
+
     if not isinstance(plan["actions"], list):
         return False, "'actions' трябва да е list."
 
-    # Регистрирани инструменти
+    if len(plan["actions"]) > MAX_ACTIONS:
+        return False, f"Планът съдържа повече от {MAX_ACTIONS} действия."
+
     tools = get_tools()
 
-    # Регистрирани агенти
     agents = {
-        agent.name: agent
+        agent.name.lower(): agent
         for agent in manager.agents
     }
 
-    # Проверка на действията
     for action in plan["actions"]:
 
         if not isinstance(action, dict):
             return False, "Невалидно действие."
 
-        # =====================================
-        # NORMALIZATION
-        # =====================================
+        normalize_action(action)
 
-        # Някои модели връщат tool като agent
-        if action.get("agent") == "computer.open":
-            action["agent"] = "system"
+        required_action = [
+            "agent",
+            "tool",
+            "arguments"
+        ]
 
-        if action.get("agent") == "terminal.run":
-            action["agent"] = "system"
+        for field in required_action:
 
-        if action.get("agent") == "windows.open":
-            action["agent"] = "system"
+            if field not in action:
+                return False, f"Липсва поле '{field}' в действие."
 
-        if action.get("agent") == "file.read":
-            action["agent"] = "system"
+        agent_name = action["agent"]
+        tool_name = action["tool"]
+        arguments = action["arguments"]
 
-        # computer.open използва target
-        if action.get("tool") == "computer.open":
-
-            args = action.setdefault("arguments", {})
-
-            if "path" in args and "target" not in args:
-                args["target"] = args.pop("path")
-
-            if "name" in args and "target" not in args:
-                args["target"] = args.pop("name")
-
-        # =====================================
-        # Проверки
-        # =====================================
-
-        agent_name = action.get("agent")
-        tool_name = action.get("tool")
-        arguments = action.get("arguments", {})
-
-        # Проверка за агент
         if agent_name not in agents:
             return False, f"Unknown agent: {agent_name}"
 
-        # Проверка за инструмент
         if tool_name not in tools:
             return False, f"Unknown tool: {tool_name}"
 
-        # Инструментът трябва да принадлежи на агента
+        if not isinstance(arguments, dict):
+            return False, "'arguments' трябва да е dict."
+
         agent = agents[agent_name]
 
         if tool_name not in getattr(agent, "tools", []):
@@ -92,8 +107,33 @@ def validate(plan):
                 f"Tool '{tool_name}' не принадлежи на агент '{agent_name}'."
             )
 
-        # arguments трябва да е dict
-        if not isinstance(arguments, dict):
-            return False, "'arguments' трябва да е dict."
+        # =====================================
+        # Security Layer (v1)
+        # =====================================
+
+        dangerous = (
+            "format",
+            "shutdown",
+            "restart",
+            "del ",
+            "rm -rf",
+            "powershell",
+        )
+
+        for value in arguments.values():
+
+            if not isinstance(value, str):
+                continue
+
+            text = value.lower()
+
+            for command in dangerous:
+
+                if command in text:
+
+                    return (
+                        False,
+                        f"Опасна команда: {command}"
+                    )
 
     return True, None
