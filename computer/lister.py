@@ -1,17 +1,16 @@
 from pathlib import Path
 
-from computer.history import history
 from computer.search import search
+from context.context import context
 
 
 def list_folder(target=None):
 
-    # Ако не е подадена папка, използвай последната отворена
     if target is None:
 
-        path = history.last_folder
+        path = context.current_folder
 
-        if path is None:
+        if not path:
 
             return {
                 "success": False,
@@ -52,11 +51,14 @@ def list_folder(target=None):
 
     try:
 
-        for item in sorted(folder.iterdir()):
+        for item in sorted(folder.iterdir(), key=lambda x: x.name.lower()):
 
             if item.is_dir():
+
                 folders.append(item.name)
+
             else:
+
                 files.append(item.name)
 
     except Exception as e:
@@ -66,18 +68,24 @@ def list_folder(target=None):
             "error": str(e)
         }
 
-    history.remember("folder", str(folder))
+    context.current_folder = str(folder)
 
     return {
 
         "success": True,
 
         "report": {
+
             "path": str(folder),
+
             "folders": folders,
+
             "files": files,
+
             "folder_count": len(folders),
+
             "file_count": len(files)
+
         }
 
     }
