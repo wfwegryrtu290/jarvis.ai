@@ -1,7 +1,7 @@
 import os
 
-from computer.history import history
 from computer.search import search
+from context.context import context
 
 
 def open_target(target):
@@ -17,17 +17,34 @@ def open_target(target):
 
     kind, path = result
 
-    history.remember(kind, path)
+    # Запомняме последното отворено
+    if kind == "folder":
+        context.current_folder = path
 
-    os.startfile(path)
+    elif kind == "file":
+        context.current_file = path
+
+    elif kind == "app":
+        context.current_app = path
+
+    try:
+
+        os.startfile(path)
+
+    except Exception as e:
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
     return {
 
         "success": True,
 
-        "report": f"Отворих {target}.",
+        "message": f"Отворих {target}.",
 
-        "type": kind,
+        "kind": kind,
 
         "path": path
 
