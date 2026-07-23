@@ -1,58 +1,89 @@
 class ComputerIndex:
 
-        def __init__(self):
+    def __init__(self):
 
-                self.apps = {}
-                        self.files = {}
-                                self.folders = {}
+        self.apps = {}
+        self.files = {}
+        self.folders = {}
 
-                                    def clear(self):
+    def clear(self):
 
-                                            self.apps.clear()
-                                                    self.files.clear()
-                                                            self.folders.clear()
+        self.apps.clear()
+        self.files.clear()
+        self.folders.clear()
 
-                                                                def add_app(self, name, path):
+    def add_app(self, name, path):
 
-                                                                        self.apps[name.lower().strip()] = path
+        if not name or not path:
+            return
 
-                                                                            def add_file(self, name, path):
+        self.apps[name.lower().strip()] = path
 
-                                                                                    self.files[name.lower().strip()] = path
+    def add_file(self, name, path):
 
-                                                                                        def add_folder(self, name, path):
+        if not name or not path:
+            return
 
-                                                                                                self.folders[name.lower().strip()] = path
+        self.files[name.lower().strip()] = path
 
-                                                                                                    def find(self, target):
+    def add_folder(self, name, path):
 
-                                                                                                            target = target.lower().strip()
+        if not name or not path:
+            return
 
-                                                                                                                    # Точно съвпадение
+        self.folders[name.lower().strip()] = path
 
-                                                                                                                            if target in self.apps:
-                                                                                                                                        return ("app", self.apps[target])
+    def find(self, target):
 
-                                                                                                                                                if target in self.files:
-                                                                                                                                                            return ("file", self.files[target])
+        if not target:
+            return None
 
-                                                                                                                                                                    if target in self.folders:
-                                                                                                                                                                                return ("folder", self.folders[target])
+        target = target.lower().strip()
 
-                                                                                                                                                                                        # Частично съвпадение
+        # Точно съвпадение
 
-                                                                                                                                                                                                for collection, kind in (
-                                                                                                                                                                                                            (self.apps, "app"),
-                                                                                                                                                                                                                        (self.files, "file"),
-                                                                                                                                                                                                                                    (self.folders, "folder"),
-                                                                                                                                                                                                                                            ):
+        if target in self.apps:
+            return ("app", self.apps[target])
 
-                                                                                                                                                                                                                                                        for name, path in collection.items():
+        if target in self.files:
+            return ("file", self.files[target])
 
-                                                                                                                                                                                                                                                                        if target in name:
-                                                                                                                                                                                                                                                                                            return (kind, path)
+        if target in self.folders:
+            return ("folder", self.folders[target])
 
-                                                                                                                                                                                                                                                                                                    return None
+        # Частично съвпадение
+
+        collections = (
+            (self.apps, "app"),
+            (self.files, "file"),
+            (self.folders, "folder"),
+        )
+
+        for collection, kind in collections:
+
+            for name, path in collection.items():
+
+                if target in name:
+                    return (kind, path)
+
+        return None
+
+    def stats(self):
+
+        return {
+            "apps": len(self.apps),
+            "files": len(self.files),
+            "folders": len(self.folders),
+            "total": (
+                len(self.apps)
+                + len(self.files)
+                + len(self.folders)
+            ),
+        }
+
+    def exists(self, target):
+
+        return self.find(target) is not None
 
 
-                                                                                                                                                                                                                                                                                                    computer = ComputerIndex()
+computer = ComputerIndex()                                                                                                                                                                                                                                                                                                    computer = ComputerIndex()
