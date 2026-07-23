@@ -8,30 +8,41 @@ class SystemAgent(BaseAgent):
     name = "system"
 
     tools = [
-        "computer.open",
-        "terminal.run",
-        "windows.open",
-        "system.info",
+
         "computer.open",
         "computer.list",
         "computer.read",
+        "computer.activate",
+        "computer.close",
+
         "terminal.run",
+
         "windows.open",
+
         "system.info"
+
     ]
-    
 
     def can_handle(self, task):
 
-        return task["agent"] == "system"
+        return task.get("agent") == "system"
 
     def execute(self, task):
 
+        tool = task.get("tool")
+
+        if tool not in self.tools:
+
+            return {
+                "success": False,
+                "error": f"Tool '{tool}' не принадлежи на агент '{self.name}'."
+            }
+
         return execute(
 
-            task["tool"],
+            tool,
 
-            task["arguments"]
+            task.get("arguments", {})
 
         )
 
