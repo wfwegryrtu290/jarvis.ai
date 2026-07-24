@@ -1,48 +1,136 @@
+from pathlib import Path
 import sqlite3
+from datetime import datetime
 
-DB = "memory/memory.db"
+
+DB_PATH = Path(__file__).parent / "memory.db"
 
 
-def create_memory():
-    conn = sqlite3.connect(DB)
-    cursor = conn.cursor()
+class Memory:
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user TEXT,
-            assistant TEXT
+    def __init__(self):
+
+        DB_PATH.parent.mkdir(
+            parents=True,
+            exist_ok=True
         )
-    """)
 
-    conn.commit()
-    conn.close()
+        self.conn = sqlite3.connect(DB_PATH)
+
+        self.conn.row_factory = sqlite3.Row
+
+        self.create()
+
+    def create(self):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS messages(
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            timestamp TEXT,
+
+            role TEXT,
+
+            content TEXT
+
+        )
+        """)
+
+        self.conn.commit()
+
+    def add(self, role, content):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+
+            """
+            INSERT INTO messages(
+                timestamp,
+                role,
+                content
+            )
+            VALUES(?,?,?)
+            """,
+
+            (
+                datetime.now().isoformat(),
+                role,
+                content
+            )
+
+        )
+
+        self.conn.commit()
+
+    def conversation(self, limit=20):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+
+            """
+            SELECT *
+            FROM messages
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+
+            (limit,)
+
+        )
+
+        rows = cursor.fetchall()
+
+        return list(reversed([
+            dict(row)
+            for row in rows
+        ]))
+
+    def search(self, text):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+
+            """
+            SELECT *
+            FROM messages
+            WHERE content LIKE ?
+            ORDER BY id DESC
+            """,
+
+            (f"%{text}%",)
+
+        )
+
+        return [
+            dict(row)
+            for row in cursor.fetchall()
+        ]
+
+    def clear(self):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            "DELETE FROM messages"
+        )
+
+        self.conn.commit()
+
+    def count(self):
+
+        cursor = self.conn.cursor()
+
+        cursor.execute(
+            "SELECT COUNT(*) FROM messages"
+        )
+
+        return cursor.fetchone()[0]
 
 
-def save_message(user, assistant):
-    conn = sqlite3.connect(DB)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT INTO messages(user, assistant) VALUES (?, ?)",
-        (user, assistant)
-    )
-
-    conn.commit()
-    conn.close()
-
-
-def get_memory(limit=10):
-    conn = sqlite3.connect(DB)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT user, assistant FROM messages ORDER BY id DESC LIMIT ?",
-        (limit,)
-    )
-
-    rows = cursor.fetchall()
-
-    conn.close()
-
-    return rows[::-1]
+memory = Memory()
