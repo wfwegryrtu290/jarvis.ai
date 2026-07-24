@@ -1,5 +1,8 @@
-import shutil
 import os
+import shutil
+from datetime import datetime
+
+from core.logger import logger
 
 
 BACKUP_FOLDER = "backups"
@@ -7,12 +10,30 @@ BACKUP_FOLDER = "backups"
 
 def backup(file):
 
-    os.makedirs(BACKUP_FOLDER, exist_ok=True)
+    if not os.path.exists(file):
+
+        raise FileNotFoundError(file)
+
+    os.makedirs(
+        BACKUP_FOLDER,
+        exist_ok=True
+    )
+
+    timestamp = datetime.now().strftime(
+        "%Y%m%d_%H%M%S"
+    )
 
     filename = os.path.basename(file)
 
-    dst = os.path.join(BACKUP_FOLDER, filename)
+    name, ext = os.path.splitext(filename)
 
-    shutil.copy(file, dst)
+    dst = os.path.join(
+        BACKUP_FOLDER,
+        f"{name}_{timestamp}{ext}"
+    )
+
+    shutil.copy2(file, dst)
+
+    logger.info(f"Backup created: {dst}")
 
     return dst
