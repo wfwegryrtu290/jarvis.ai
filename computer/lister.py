@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from core.logger import logger
 from computer.search import search
 from context.context import context
 
 
 def list_folder(target=None):
 
+    # Използвай последната отворена папка
     if target is None:
 
         path = context.current_folder
@@ -46,22 +48,47 @@ def list_folder(target=None):
             "error": "Папката не съществува."
         }
 
+    logger.info(f"Listing folder: {folder}")
+
     folders = []
     files = []
+
+    total_size = 0
+    hidden_count = 0
 
     try:
 
         for item in sorted(folder.iterdir(), key=lambda x: x.name.lower()):
 
+            if item.name.startswith("."):
+                hidden_count += 1
+
             if item.is_dir():
 
-                folders.append(item.name)
+                folders.append({
+                    "name": item.name,
+                    "path": str(item)
+                })
 
             else:
 
-                files.append(item.name)
+                try:
+                    size = item.stat().st_size
+                except Exception:
+                    size = 0
+
+                total_size += size
+
+                files.append({
+                    "name": item.name,
+                    "path": str(item),
+                    "size": size,
+                    "extension": item.suffix.lower()
+                })
 
     except Exception as e:
+
+        logger.exception(e)
 
         return {
             "success": False,
@@ -71,21 +98,14 @@ def list_folder(target=None):
     context.current_folder = str(folder)
 
     return {
-
         "success": True,
-
         "report": {
-
             "path": str(folder),
-
             "folders": folders,
-
             "files": files,
-
             "folder_count": len(folders),
-
-            "file_count": len(files)
-
+            "file_count": len(files),
+            "hidden_items": hidden_count,
+            "total_size": total_size
         }
-
     }
