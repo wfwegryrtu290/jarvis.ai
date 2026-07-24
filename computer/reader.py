@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from core.logger import logger
 from computer.search import search
 from context.context import context
 
@@ -18,13 +19,13 @@ TEXT_EXTENSIONS = {
     ".xml",
     ".html",
     ".css",
-    ".js"
+    ".js",
 }
 
 
 def read_file(target=None):
 
-    # Ако няма подаден файл, използвай последния избран
+    # Използвай последния отворен файл
     if target is None:
 
         path = context.current_file
@@ -69,8 +70,10 @@ def read_file(target=None):
 
         return {
             "success": False,
-            "error": f"Форматът {file.suffix} все още не се поддържа."
+            "error": f"Форматът '{file.suffix}' все още не се поддържа."
         }
+
+    logger.info(f"Reading file: {file}")
 
     try:
 
@@ -81,6 +84,8 @@ def read_file(target=None):
 
     except Exception as e:
 
+        logger.exception(e)
+
         return {
             "success": False,
             "error": str(e)
@@ -89,11 +94,10 @@ def read_file(target=None):
     context.current_file = str(file)
 
     return {
-
         "success": True,
-
         "report": text,
-
-        "path": str(file)
-
+        "path": str(file),
+        "lines": len(text.splitlines()),
+        "size": file.stat().st_size,
+        "extension": file.suffix.lower(),
     }
