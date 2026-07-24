@@ -1,5 +1,7 @@
 import pygetwindow as gw
 
+from core.logger import logger
+
 
 def get_titles():
 
@@ -10,10 +12,9 @@ def get_titles():
         title = window.title.strip()
 
         if title:
-
             titles.append(title)
 
-    return titles
+    return sorted(titles)
 
 
 def _find_windows(target):
@@ -30,10 +31,17 @@ def _find_windows(target):
             continue
 
         if target in title.lower():
-
             matches.append(window)
 
     return matches
+
+
+def list_windows():
+
+    return {
+        "success": True,
+        "report": get_titles()
+    }
 
 
 def activate(target):
@@ -64,22 +72,84 @@ def activate(target):
 
         window.activate()
 
+        logger.info(f"Activated window: {window.title}")
+
         return {
-
             "success": True,
-
             "report": f"Активирах '{window.title}'."
-
         }
 
     except Exception as e:
 
+        logger.exception(e)
+
         return {
-
             "success": False,
-
             "error": str(e)
+        }
 
+
+def minimize(target):
+
+    windows = _find_windows(target)
+
+    if not windows:
+
+        return {
+            "success": False,
+            "error": f"Не намерих прозорец '{target}'."
+        }
+
+    window = windows[0]
+
+    try:
+
+        window.minimize()
+
+        return {
+            "success": True,
+            "report": f"Минимизирах '{window.title}'."
+        }
+
+    except Exception as e:
+
+        logger.exception(e)
+
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+def maximize(target):
+
+    windows = _find_windows(target)
+
+    if not windows:
+
+        return {
+            "success": False,
+            "error": f"Не намерих прозорец '{target}'."
+        }
+
+    window = windows[0]
+
+    try:
+
+        window.maximize()
+
+        return {
+            "success": True,
+            "report": f"Максимизирах '{window.title}'."
+        }
+
+    except Exception as e:
+
+        logger.exception(e)
+
+        return {
+            "success": False,
+            "error": str(e)
         }
 
 
@@ -108,20 +178,18 @@ def close(target):
 
         window.close()
 
+        logger.info(f"Closed window: {window.title}")
+
         return {
-
             "success": True,
-
             "report": f"Затворих '{window.title}'."
-
         }
 
     except Exception as e:
 
+        logger.exception(e)
+
         return {
-
             "success": False,
-
             "error": str(e)
-
         }
