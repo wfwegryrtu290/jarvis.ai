@@ -27,24 +27,20 @@ def process(message):
         logger.debug(plan)
 
         if not isinstance(plan, dict):
-
             return "Planner върна невалиден резултат."
 
         ok, error = validate(plan)
 
         if not ok:
-
             logger.error(error)
-
             return error
-
-        logger.info("⚙ Executing actions...")
 
         actions = plan.get("actions", [])
 
         if not isinstance(actions, list):
-
             return "Невалиден списък с действия."
+
+        logger.info(f"⚙ Executing {len(actions)} action(s)...")
 
         results = []
 
@@ -52,11 +48,13 @@ def process(message):
 
             result = manager.execute(action)
 
+            logger.debug(result)
+
             results.append(result)
 
         kernel.last_results = results
 
-        messages = []
+        output = []
 
         for result in results:
 
@@ -67,10 +65,14 @@ def process(message):
 
                 logger.error(result)
 
-                return result.get(
-                    "error",
-                    "Възникна грешка."
+                output.append(
+                    result.get(
+                        "error",
+                        "Възникна грешка."
+                    )
                 )
+
+                continue
 
             if "report" in result:
 
@@ -78,26 +80,36 @@ def process(message):
 
                 if isinstance(report, dict):
 
-                    return json.dumps(
-                        report,
-                        ensure_ascii=False,
-                        indent=4
+                    output.append(
+                        json.dumps(
+                            report,
+                            ensure_ascii=False,
+                            indent=4
+                        )
                     )
 
-                return str(report)
+                else:
 
-            if "message" in result:
+                    output.append(str(report))
 
-                messages.append(str(result["message"]))
+            elif "message" in result:
 
-        if messages:
+                output.append(str(result["message"]))
 
-            return "\n".join(messages)
+        if output:
+
+            elapsed = round(
+                time.perf_counter() - start,
+                3
+            )
+
+            logger.info(f"✅ Finished in {elapsed}s")
+
+            return "\n\n".join(output)
 
         answer = str(plan.get("answer", "")).strip()
 
         if not answer:
-
             answer = "Готово."
 
         elapsed = round(
