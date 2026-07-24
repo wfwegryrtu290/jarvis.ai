@@ -1,6 +1,8 @@
 import ast
 import os
 
+from core.logger import logger
+
 
 class DependencyGraph:
 
@@ -8,9 +10,15 @@ class DependencyGraph:
 
         self.graph = {}
 
-    def scan(self, root):
+    def clear(self):
 
         self.graph.clear()
+
+    def scan(self, root):
+
+        logger.info(f"Scanning dependencies: {root}")
+
+        self.clear()
 
         for path, dirs, files in os.walk(root):
 
@@ -20,7 +28,9 @@ class DependencyGraph:
                     "__pycache__",
                     ".git",
                     ".venv",
-                    "venv"
+                    "venv",
+                    ".idea",
+                    ".vscode",
                 )
             ]
 
@@ -33,6 +43,8 @@ class DependencyGraph:
 
                 self.graph[full] = self.get_imports(full)
 
+        logger.info(f"Dependency graph contains {len(self.graph)} files.")
+
     def get_imports(self, filename):
 
         imports = []
@@ -43,7 +55,9 @@ class DependencyGraph:
 
                 tree = ast.parse(f.read())
 
-        except Exception:
+        except Exception as e:
+
+            logger.debug(f"Cannot parse {filename}: {e}")
 
             return imports
 
@@ -51,17 +65,15 @@ class DependencyGraph:
 
             if isinstance(node, ast.Import):
 
-                for n in node.names:
-
-                    imports.append(n.name)
+                for module in node.names:
+                    imports.append(module.name)
 
             elif isinstance(node, ast.ImportFrom):
 
                 if node.module:
-
                     imports.append(node.module)
 
-        return imports
+        return sorted(set(imports))
 
     def dependencies(self, filename):
 
@@ -73,13 +85,18 @@ class DependencyGraph:
 
         for file, imports in self.graph.items():
 
-            for imp in imports:
-
-                if module in imp:
-
-                    result.append(file)
+            if any(module in imp for imp in imports):
+                result.append(file)
 
         return result
+
+    def has_dependency(self, filename, module):
+
+        return module in self.graph.get(filename, [])
+
+    def count(self):
+
+        return len(self.graph)
 
 
 dependency = DependencyGraph()
