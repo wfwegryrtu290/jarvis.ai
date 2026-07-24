@@ -1,36 +1,78 @@
 from developer.agent import developer
 from agents.manager import manager
 from tools.registry import get_tools
+from memory.manager import memory
 
 
 def build_context():
 
-    tools = get_tools()
+    # ==========================
+    # Project
+    # ==========================
 
-    tool_list = ""
+    project = developer.stats()
 
-    for name, tool in tools.items():
-        tool_list += f"- {name}: {tool['description']}\n"
+    # ==========================
+    # Agents
+    # ==========================
 
-    agent_list = ""
+    agent_list = []
 
     for agent in manager.agents:
 
-        agent_list += f"\n{agent.name}\n"
+        agent_list.append(f"- {agent.name}")
 
         for tool in getattr(agent, "tools", []):
-            agent_list += f"  - {tool}\n"
+
+            agent_list.append(f"    • {tool}")
+
+    # ==========================
+    # Tools
+    # ==========================
+
+    tool_list = []
+
+    for name, tool in get_tools().items():
+
+        description = tool.get(
+            "description",
+            ""
+        )
+
+        tool_list.append(
+            f"- {name}: {description}"
+        )
+
+    # ==========================
+    # Memory
+    # ==========================
+
+    memory_context = memory.context(10)
+
+    if not memory_context:
+
+        memory_context = "Няма предишни разговори."
+
+    # ==========================
+    # Build
+    # ==========================
 
     return f"""
-===== PROJECT =====
+================ PROJECT ================
 
-{developer.stats()}
+{project}
 
-===== AGENTS =====
+================ AGENTS ================
 
-{agent_list}
+{chr(10).join(agent_list)}
 
-===== TOOLS =====
+================ TOOLS ================
 
-{tool_list}
+{chr(10).join(tool_list)}
+
+================ MEMORY ================
+
+{memory_context}
+
+========================================
 """
