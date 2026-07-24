@@ -1,6 +1,8 @@
 import ast
 import os
 
+from core.logger import logger
+
 
 class SymbolTable:
 
@@ -9,10 +11,16 @@ class SymbolTable:
         self.functions = {}
         self.classes = {}
 
-    def scan(self, root):
+    def clear(self):
 
         self.functions.clear()
         self.classes.clear()
+
+    def scan(self, root):
+
+        logger.info(f"Scanning symbols: {root}")
+
+        self.clear()
 
         for path, dirs, files in os.walk(root):
 
@@ -22,17 +30,24 @@ class SymbolTable:
                     "__pycache__",
                     ".git",
                     ".venv",
-                    "venv"
+                    "venv",
+                    ".idea",
+                    ".vscode",
                 )
             ]
 
             for file in files:
 
                 if not file.endswith(".py"):
-
                     continue
 
-                self.parse(os.path.join(path, file))
+                self.parse(
+                    os.path.join(path, file)
+                )
+
+        logger.info(
+            f"Indexed {len(self.functions)} Python files."
+        )
 
     def parse(self, filename):
 
@@ -42,33 +57,39 @@ class SymbolTable:
 
                 tree = ast.parse(f.read())
 
-        except Exception:
+        except Exception as e:
+
+            logger.debug(f"Cannot parse {filename}: {e}")
 
             return
 
-        funcs = []
+        functions = []
         classes = []
 
         for node in ast.walk(tree):
 
             if isinstance(node, ast.FunctionDef):
 
-                funcs.append(node.name)
+                functions.append(node.name)
+
+            elif isinstance(node, ast.AsyncFunctionDef):
+
+                functions.append(node.name)
 
             elif isinstance(node, ast.ClassDef):
 
                 classes.append(node.name)
 
-        self.functions[filename] = funcs
-        self.classes[filename] = classes
+        self.functions[filename] = sorted(set(functions))
+        self.classes[filename] = sorted(set(classes))
 
     def find_function(self, name):
 
         result = []
 
-        for file, funcs in self.functions.items():
+        for file, functions in self.functions.items():
 
-            if name in funcs:
+            if name in functions:
 
                 result.append(file)
 
@@ -85,6 +106,20 @@ class SymbolTable:
                 result.append(file)
 
         return result
+
+    def function_count(self):
+
+        return sum(
+            len(v)
+            for v in self.functions.values()
+        )
+
+    def class_count(self):
+
+        return sum(
+            len(v)
+            for v in self.classes.values()
+        )
 
 
 symbols = SymbolTable()
