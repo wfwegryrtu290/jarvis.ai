@@ -11,10 +11,16 @@ class Kernel:
         self.task_count = 0
         self.completed_tasks = 0
         self.failed_tasks = 0
+
         self.current_task = None
+
         self.last_results = []
 
         logger.info("Kernel initialized")
+
+    # ==========================
+    # Lifecycle
+    # ==========================
 
     def start(self):
 
@@ -32,9 +38,19 @@ class Kernel:
 
         bus.emit("kernel.stopped")
 
+    def is_running(self):
+
+        return state.get("running", False)
+
+    # ==========================
+    # Tasks
+    # ==========================
+
     def add_task(self, task):
 
         self.task_count += 1
+
+        self.current_task = task
 
         queue.add(task)
 
@@ -52,23 +68,47 @@ class Kernel:
 
         self.last_results.append(result)
 
+        self.current_task = None
+
         bus.emit("task.completed", result)
 
     def task_failed(self, error):
 
         self.failed_tasks += 1
 
+        self.current_task = None
+
         bus.emit("task.failed", error)
+
+    # ==========================
+    # Results
+    # ==========================
 
     def clear_results(self):
 
         self.last_results.clear()
 
+    def reset(self):
+
+        self.task_count = 0
+        self.completed_tasks = 0
+        self.failed_tasks = 0
+
+        self.current_task = None
+
+        self.last_results.clear()
+
+        logger.info("Kernel reset")
+
+    # ==========================
+    # Stats
+    # ==========================
+
     def stats(self):
 
         return {
 
-            "running": state.get("running"),
+            "running": self.is_running(),
 
             "task_count": self.task_count,
 
