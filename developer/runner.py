@@ -1,24 +1,51 @@
 import subprocess
 
+from core.logger import logger
+
 
 def run_python(file):
 
-    result = subprocess.run(
+    try:
 
-        ["python", file],
+        result = subprocess.run(
+            ["python", file],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
 
-        capture_output=True,
+        success = result.returncode == 0
 
-        text=True
+        if success:
+            logger.info(f"Executed: {file}")
+        else:
+            logger.error(f"Execution failed: {file}")
 
-    )
+        return {
+            "success": success,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "returncode": result.returncode
+        }
 
-    return {
+    except subprocess.TimeoutExpired:
 
-        "stdout": result.stdout,
+        logger.error(f"Timeout while executing {file}")
 
-        "stderr": result.stderr,
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": "Execution timed out.",
+            "returncode": -1
+        }
 
-        "returncode": result.returncode
+    except Exception as e:
 
-    }
+        logger.exception(e)
+
+        return {
+            "success": False,
+            "stdout": "",
+            "stderr": str(e),
+            "returncode": -1
+        }
