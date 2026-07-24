@@ -59,6 +59,8 @@ def create_plan(message):
 Върни само JSON.
 """
 
+    logger.info(f"Planning with model: {MODEL}")
+
     try:
 
         response = ollama.chat(
@@ -96,6 +98,14 @@ def create_plan(message):
         .get("content", "")
     )
 
+    if not content:
+
+        logger.error("Empty response from model.")
+
+        return fallback(
+            "AI моделът не върна отговор."
+        )
+
     text = clean_response(content)
 
     logger.debug(text)
@@ -110,17 +120,35 @@ def create_plan(message):
 
         plan = json.loads(text)
 
-        if not isinstance(plan, dict):
-            return fallback(text)
-
-        plan.setdefault("thought", "")
-        plan.setdefault("actions", [])
-        plan.setdefault("answer", "")
-
-        return plan
-
     except Exception as e:
 
         logger.exception(e)
 
         return fallback(text)
+
+    if not isinstance(plan, dict):
+        return fallback(text)
+
+    plan.setdefault("thought", "")
+    plan.setdefault("actions", [])
+    plan.setdefault("answer", "")
+
+    if not isinstance(plan["thought"], str):
+        plan["thought"] = str(plan["thought"])
+
+    if not isinstance(plan["actions"], list):
+
+        logger.warning(
+            "Planner returned invalid actions."
+        )
+
+        plan["actions"] = []
+
+    if not isinstance(plan["answer"], str):
+        plan["answer"] = str(plan["answer"])
+
+    logger.info(
+        f"Planner created {len(plan['actions'])} action(s)."
+    )
+
+    return plan
