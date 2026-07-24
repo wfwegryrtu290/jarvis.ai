@@ -17,14 +17,23 @@ class History:
 
     def last(self):
 
-        if not self.items:
-            return None
-
-        return self.items[-1]
+        return self.items[-1] if self.items else None
 
     def all(self):
 
         return list(self.items)
+
+    def recent(self, limit=10):
+
+        return list(self.items)[-limit:]
+
+    def find(self, event):
+
+        return [
+            item
+            for item in self.items
+            if item["event"] == event
+        ]
 
     def clear(self):
 
