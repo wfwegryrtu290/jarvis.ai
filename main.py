@@ -1,5 +1,5 @@
 import tools
-
+import tools.load_tools
 from tools.registry import get_tools
 
 print("\n===== TOOLS =====")
